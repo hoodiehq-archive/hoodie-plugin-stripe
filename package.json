@@ -24,7 +24,9 @@
       "hoodie-plugin-stripe"
     ]
   },
-  "dependencies": {},
+  "dependencies": {
+    "stripe": "^2.6.3"
+  },
   "scripts": {
     "test": "grunt test"
   }
