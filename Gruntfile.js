@@ -8,7 +8,7 @@ module.exports = function (grunt) {
     jshint: {
       files: [
         'Gruntfile.js',
-        'hoodie.template.js',
+        'hoodie.stripe.js',
         'worker.js',
         'hooks/*.js'
       ],

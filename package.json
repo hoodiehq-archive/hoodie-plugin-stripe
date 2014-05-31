@@ -1,7 +1,7 @@
 {
-  "name": "hoodie-plugin-template",
+  "name": "hoodie-plugin-stripe",
   "version": "1.0.0",
-  "description": "Basic Hoodie plugin layout",
+  "description": "Hoodie payments with stripe",
   "main": "worker.js",
   "devDependencies": {
     "mocha": "~1.17.1",
@@ -11,7 +11,7 @@
     "grunt-mocha-browser": "0.0.4",
     "grunt-hoodie": "0.3.0",
     "grunt-continue": "0.0.1",
-    "hoodie-server": "^0.9.19",
+    "hoodie-server": "0.9.26",
     "grunt-simple-mocha": "^0.4.0",
     "grunt-contrib-jshint": "^0.9.2",
     "grunt-env": "^0.4.1",
@@ -20,7 +20,8 @@
   },
   "hoodie": {
     "plugins": [
-      "hoodie-plugin-users"
+      "hoodie-plugin-users",
+      "hoodie-plugin-stripe"
     ]
   },
   "dependencies": {},
