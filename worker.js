@@ -11,7 +11,14 @@ module.exports = function (hoodie, callback) {
   // subscribe to stripePlan
   // log anything into plugin-stripe database
 
-  var stripe = Stripe(hoodie.config.get('stripeKey'));
+  var stripeKey = hoodie.config.get('stripeKey')
+  if (!stripeKey) {
+    console.log('NO STRIPE KEY CONFIGURED, PLEASE SET IT IN THE ADMIN UI');
+    console.log('NO PAYMENT RELATED ACTIONS WILL BE RUN');
+    return;
+  }
+
+  var stripe = Stripe(stripeKey);
 
   var handleUserChange = function(doc) {
     // worarkound for https://github.com/hoodiehq/hoodie-plugins-api/issues/6
