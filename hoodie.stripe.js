@@ -1,27 +1,40 @@
-/**
- * Hoodie plugin template
- * An example plugin, this is where you put your frontend code (if any)
- */
-
-/* global Hoodie */
-
-Hoodie.extend(function (hoodie) {
+Hoodie.extend(function (hoodie, lib, utils) {
   'use strict';
 
-  var userDocUrl = function(username) {
-    return '/_users/org.couchdb.user:user%2f' + encodeURIComponent(username);
-  };
+  function couchDbUsername(username) {
+    var type = 'user';
+    if (hoodie.account.hasAnonymousAccount()){
+      username = hoodie.id();
+      type = 'user_anonymous';
+    }
+    return type+'/' + username;
+  }
+  function userDocUrl(username) {
+    return '/_users/org.couchdb.user:' + encodeURIComponent( couchDbUsername(username) );
+  }
+  function getHeaders(username, password) {
+    return {
+      'Authorization': 'Basic '+btoa(couchDbUsername(username) + ':' + password)
+    };
+  }
 
-  var storeStripeToken = function (stripeToken, username) {
+  var storeStripeToken = function (stripeToken, username, password) {
+    console.log('> storeStripeToken');
     username = username.toLowerCase();
-    hoodie.account.request('GET', userDocUrl(username))
+    $.ajax({
+      type: 'get',
+      url: '/_api' + userDocUrl(username),
+      headers: getHeaders(username, password)
+    })
     .done(function(userDoc) {
       userDoc.stripeToken = stripeToken;
-      var options = {
+      $.ajax({
+        type: 'put',
+        url: '/_api' + userDocUrl(username),
+        headers: getHeaders(username, password),
         data: JSON.stringify(userDoc),
         contentType: 'application/json'
-      }
-      hoodie.account.request('PUT', userDocUrl(username), options)
+      })
       .done(function() {
         console.log('stripe token stored');
       })
@@ -30,14 +43,14 @@ Hoodie.extend(function (hoodie) {
       });
     })
     .fail(function() {
-      console.log('failed loading user doc')
-    })
+      console.log('failed loading user doc');
+    });
   };
-  
+
   var handleSignUpError = function () {
     console.log(arguments);
   };
-  
+
   var validateType = function (type) {
     if (type !== 'stripe') {
       console.log('not a stripe: ' + type);
@@ -48,9 +61,8 @@ Hoodie.extend(function (hoodie) {
   hoodie.account.signUpWith = function (type, username, password, stripeToken) {
     console.log('> hoodie.account.signUpWith');
     validateType(type);
-
     return hoodie.account.signUp(username, password)
-      .done(storeStripeToken.bind(this, stripeToken))
+      .progress(storeStripeToken.bind(this, stripeToken, username, password))
       .fail(handleSignUpError);
   };
 });
