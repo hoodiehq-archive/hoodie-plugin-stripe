@@ -20,7 +20,13 @@
   that is also available in worker.js, with access to the database,
   and other convenience libraries.
 */
-module.exports = function (/* hoodie */) {
+var stripe = require('../lib/stripe');
+
+module.exports = function (hoodie) {
+
+  var handleConfirm = function(doc, callback) {
+    stripe.signUp(hoodie, doc, callback);
+  }
 
   return {
     /*
@@ -53,5 +59,7 @@ module.exports = function (/* hoodie */) {
 
     //   return true
     // }
+    'plugin.user.confirm': handleConfirm,
+    'plugin.user.confirm.changeUsername': handleConfirm,
   };
 };
