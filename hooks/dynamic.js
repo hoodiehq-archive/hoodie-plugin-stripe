@@ -25,7 +25,14 @@ var stripe = require('../lib/stripe');
 module.exports = function (hoodie) {
 
   var handleConfirm = function(doc, callback) {
-    stripe.signUp(hoodie, doc, callback);
+    stripe.signUp(hoodie, doc, function(err) {
+      // map async.every to regular node conventions
+      if (err && err == 'ignore') {
+        callback(false); // async.every
+      } else {
+        callback(true);
+      }
+    });
   }
 
   return {
