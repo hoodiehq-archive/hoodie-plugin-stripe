@@ -25,6 +25,7 @@
     ]
   },
   "dependencies": {
+    "lodash": "^2.4.1",
     "stripe": "^2.6.3"
   },
   "scripts": {
