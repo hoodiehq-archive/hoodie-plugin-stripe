@@ -21,6 +21,7 @@
   and other convenience libraries.
 */
 var stripe = require('../lib/stripe');
+var async = require('async');
 
 module.exports = function (hoodie) {
 
@@ -34,6 +35,96 @@ module.exports = function (hoodie) {
       }
     });
   }
+
+  var plugin_db = hoodie.database('plugin/stripe');
+  var users_db = hoodie.database('_users');
+  var handleWebHook = function(request, reply) {
+
+    // create a new doc in /plugin/stripe/
+    // with userid/timestamp
+    var userDocForCustomerId = function(callback) {
+      var customerId = request.payload.data.object.customer;
+      if (customerId == undefined) {
+        // this is a creating a customer event
+        customerId = request.payload.data.object.id;
+      }
+      var queryArgs = {
+        include_docs: true,
+        startkey: customerId,
+        limit: 1
+      };
+      users_db.query('stripe-by-id', queryArgs, function(error, rows) {
+        if (error) {
+          return callback(new Error(error));
+        }
+        callback(null, {
+          hoodieId: rows[0].doc.hoodieId,
+          docId: rows._id
+        });
+      });
+    };
+
+    var storeWebHook = function(userId, callback) {
+      var event = request.payload;
+      event.stripe_id = event.id;
+      event.stripe_type = event.type;
+      event.hoodie_user_id = userId.docId;
+      event.id = [userId.hoodieId, event.created, event.id].join('/');
+
+      callback(null, event);
+    };
+
+    var handleStoreWebHook = function(event, callback) {
+      plugin_db.add('event', event, function(error) {
+        if(error) {
+          return callback(new Error(error));
+        }
+        callback(null, event);
+      });
+    }
+
+    var maybeStoreErrorOnUserDoc = function(event, callback) {
+      var failureEvents = [
+        'charge.failed',
+        'invoice.payment_failed'
+      ];
+
+      if (failureEvents.indexOf(event.stripe.type) === -1) {
+        // no errarrr, we can jump out
+        return callback();
+      }
+
+      // store stripe error on user doc
+      var hoodieError = {
+        name: event.data.object.failure_code,
+        message: event.data.object.failure_message
+      };
+      users_db.find('user', event.hoodie_doc_id, function(error, doc) {
+        if(error) {
+          return callback(new Error(error));
+        }
+        doc.$error = hoodieError;
+        users_db.update('user', event.hoodie_doc_id, doc, callback);
+      });
+    };
+
+    var done = function(error) {
+      if (error) {
+        return reply(new Error(error));
+      }
+      // 200 imlplied by hapi, stripe needs 2xx response
+      reply('ok\n');
+    };
+
+    // get user doc for customerId
+    // store webhook doc at
+    async.waterfall([
+      userDocForCustomerId,
+      storeWebHook,
+      handleStoreWebHook,
+      maybeStoreErrorOnUserDoc
+      ], done);
+  };
 
   return {
     /*
@@ -66,6 +157,7 @@ module.exports = function (hoodie) {
 
     //   return true
     // }
+    'server.api.plugin-request': handleWebHook,
     'plugin.user.confirm': handleConfirm,
     'plugin.user.confirm.changeUsername': handleConfirm,
   };
